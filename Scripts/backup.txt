@@ -1,0 +1,77 @@
+I. Монтирование диска
+1. Найти UUID нашего диска и тип файловой системы (по размеру) командой
+lsblk
+2. Создаём точку монтирования
+sudo mkdir /backup
+3. Редактируем точки постоянного монтирования
+sudo nano /etc/fstab
+
+вставить, заменив UUID и exfat на значения из п.1
+
+# <file system>     <mount point>       <type>     <options>     <dump>  <pass>
+UUID=1234-ABCE      /backup             exfat       defaults      0       0
+
+4. Проверяем монтирование
+sudo mount -a
+lsblk
+в списке раздел должен быть с точкой монтирования
+
+5. Создаём раздельные директории для бэкапов БД и файлов (которые все сейчас в директории пользователя)
+
+sudo mkdir /backup/SQL
+sudo mkdir /backup/DATA
+sudo chmod 775 -R /backup
+
+II.
+6. создаём директорию исполняемого скрипта
+sudo mkdir /scripts
+
+7. Создаём в директории скрипт и заполняем его (rsync подходит только для файловых систем Linux, mksquashfs крутая штука, надо тестить)
+
+sudo nano /scripts/backup.sh
+
+вставляем
+
+#!/bin/sh
+PATH=/etc:/bin:/sbin:/usr/bin:/usr/sbin:/usr/local/bin:/usr/local/sbin
+
+PGPASSWORD=RT7PlanB
+export PGPASSWORD
+pathB=/backup/SQL
+dbUser=postgres
+database=treatmentplanningdb
+
+find $pathB \( -name "*-1[^5].*" -o -name "*-[023]?.*" \) -ctime +61 -delete
+pg_dump -U $dbUser $database | gzip > $pathB/pgsql_$(date "+%Y-%m-%d").sql.gz
+
+unset PGPASSWORD
+
+pathA=/backup/DATA
+## mkdir $pathA
+cd $pathA
+tar -cpzf $(date "+%Y-%m-%d").tar.gz /home/aleksey
+## rsync -az --delete /home/aleksey $pathA
+## mksquashfs /home/aleksey $(date "+%Y-%m-%d").sqsh -e tmp
+
+Выходим и сохраняем.
+Делаем файл исполняемым:
+
+sudo chmod +x /scripts/backup.sh
+
+8. Добавляем время исполнения в планировщик задач
+
+sudo crontab -e
+
+вставить и отредактировать в соответствии с требуемым графиком
+
+# Примеры оформления задач в планировщике (формат данных):
+# .---------------- минуты (0 - 59)
+# |  .------------- часы (0 - 23)
+# |  |  .---------- дни месяца (1 - 31)
+# |  |  |  .------- сами месяцы (1 - 12) OR jan,feb,mar,apr ...
+# |  |  |  |  .---- дни недели (0 - 6) (0 или 7 это воскресенье в зависимости от настроек системы) можно использовать сокращения типа mon,tue,wed,thu,fri,sat,sun
+# |  |  |  |  |
+# *  *  *  *  * имя пользоваться  команда, которую нужно запустить
+# задача бэкапирования 
+  01 01 *  *  *                   /scripts/backup.sh
+

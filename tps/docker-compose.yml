@@ -1,0 +1,90 @@
+services:
+  cors:
+    image: nginx:1.16.0
+    container_name: cors
+    volumes:
+      - ./cors:/etc/nginx/conf.d
+      - ./ssl:/etc/nginx/ssl
+    ports:
+      - "5080:443"      
+      - '9090:9000'
+    restart: unless-stopped
+    depends_on:
+      - backend
+
+  mq:
+    image: rabbitmq:3.10.7-management
+    restart: always
+    container_name: mq
+    volumes:
+      - ./rabbitmq-data:/var/lib/rabbitmq/mnesia/
+      - ./rabbitmq/rabbitmq.conf:/etc/rabbitmq/rabbitmq.conf
+      - ./rabbitmq/definitions.json:/etc/rabbitmq/definitions.json
+    ports:
+      - "15672:15672"
+    healthcheck:
+      test: rabbitmq-diagnostics -q ping
+      interval: 5s
+      timeout: 30s
+      retries: 3
+
+  backend:
+    image: nexus.sibedge.com/spl-docker/tpl_backend/v2/2.15.0:544823
+    container_name: backend
+    privileged: true
+    restart: unless-stopped
+    environment:
+      - CommonSettings__MessageBrokerSettings__Host=mq
+      - CommonSettings__MessageBrokerSettings__Port=5672
+      - CommonSettings__MessageBrokerSettings__UserName=admin
+      - CommonSettings__MessageBrokerSettings__Password=byJKQ7%OG3l3
+      - CommonSettings__IcdServiceUrl=http://{BACKEND_IP_ADDRESS}:5280/api/
+    env_file: ./backend/.env
+    volumes:
+      - /dev:/dev
+      - ./tps_data/storage:/data/storage
+      - ./tps_data/dicom:/data/dicom
+      - ./tps_data/structures:/data/structures
+      - ./tps_data/raster:/data/raster
+      - ./tps_data/results:/data/results
+      - ./tps_data/dose:/data/dose
+    ports:
+      - "5180:80"
+    depends_on:
+      mq:
+        condition: service_healthy
+
+  icdservice:
+    image: nexus.sibedge.com/spl-docker/tpl_icdservice/v1/1.0.0:4fb93e
+    container_name: icdservice
+    restart: unless-stopped
+    env_file: ./icd/.env
+    ports:
+      - "5280:80"
+
+  frontend:
+    image: nexus.sibedge.com/spl-docker/tpl_frontend/v2/2.15.6:8e0b04
+    volumes:
+      - ./frontend/conf.d:/etc/nginx/conf.d
+      - ./ssl:/etc/nginx/ssl
+      - ./ssl_instructions:/usr/share/nginx/html/cert
+    environment:
+      - API_BASE_URL=https://{BACKEND_IP_ADDRESS}:5080/api
+    container_name: frontend
+    restart: unless-stopped
+    ports:
+      - '80:80'
+      - '443:443'
+
+  studycombinationworker:
+    image: nexus.sibedge.com/spl-docker/tpl_studycombination/v1/1.04.0:c52c75
+    container_name: studycombinationworker
+    restart: unless-stopped
+    environment:
+      - CommonSettings__MessageBrokerSettings__Host=mq
+      - CommonSettings__MessageBrokerSettings__Port=5672
+      - CommonSettings__MessageBrokerSettings__UserName=admin
+      - CommonSettings__MessageBrokerSettings__Password=byJKQ7%OG3l3
+    depends_on:
+      mq:
+        condition: service_healthy

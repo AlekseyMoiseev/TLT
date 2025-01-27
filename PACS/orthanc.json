@@ -1,0 +1,20 @@
+{
+  "Name" : "${ORTHANC_NAME} in Docker Compose",
+  "RemoteAccessAllowed" : true,
+  "MaximumStorageSize" : 10000,
+  "DefaultEncoding" : "Utf8",
+  "DicomModalities" : {
+    "sample" : [ "ORTHANCA", "172.18.0.1", 2000 ],
+    "sample2" : {
+      "AET" : "ORTHANCB",
+      "Port" : 2001,
+      "Host" : "172.19.0.1",
+      "Manufacturer" : "Generic",
+      "AllowEcho" : true,
+      "AllowFind" : true,
+      "AllowMove" : true,
+      "AllowStore" : true,
+	  "AllowGet" : true
+    }
+  }
+}

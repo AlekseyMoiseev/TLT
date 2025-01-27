@@ -1,0 +1,53 @@
+# Проверяем свободное место
+df
+
+# Выводим информацию о подключенных дисках
+lsblk
+
+# Повышение прав по рут
+sudo su 
+
+# Обновление репозиториев и установка менеджера RAID 
+apt update
+apt install mdadm
+
+# Создаём файловые системы на дисках
+for i in {a..b}; do parted -a optimal /dev/sd$i mklabel msdos; done
+for i in {a..b}; do parted -a optimal /dev/sd$i mkpart primary ext4 0% 100%; done
+for i in {a..b}; do parted -a optimal /dev/sd$i set 1 raid on; done
+
+# сождаём RAID
+mdadm --create /dev/md0 --level=1 --raid-devices=2 /dev/sd[ab]1
+
+# Создаём файловую систему на зеркале
+mkfs.ext4 /dev/md0
+
+# Выводим отчёт
+mdadm --detail /dev/md0
+
+# узнаем ИН диска
+blkid
+
+# обновляем автомонтирование точки
+nano /etc/fstab
+/dev/by-uuid/ДлинныйНомерДиска /mnt ext4 defaults,nofail 0 0
+
+# проверяем монтирование точки
+mount -a
+
+# Останавливаем сервисы докера
+cd /home/aleksey/tps_v2
+docker compose down
+
+# Копируем в папку то, что хотим перенести
+rsync -ah --progress /home/aleksey/. /mnt
+
+# Книмаем бэкап БД
+pg_dump -U postgres treatmentplanningdb | gzip > /mnt/pgsql_04.10.2024.sql.gz
+
+# обновляем автомонтирование точки на целевой каталог
+nano /etc/fstab
+/dev/by-uuid/ДлинныйНомерДиска /opt/tps ext4 defaults,nofail 0 0
+
+# перезагрузка, должно взлететь
+reboot

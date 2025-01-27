@@ -1,0 +1,32 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Руководство по настройке сертификата</title>
+    <link rel="stylesheet" href="style.css">
+  </head>
+  <body>
+    <div id="app">
+      <div class="container">
+        <h1>Руководство по настройке сертификата</h1>
+        <div class="button-group">
+          <a href="root-ca.crt" download class="guide-button">
+            Скачать SSL сертификат
+          </a>
+          <button class="guide-button" onclick="showInstructions('windows-chrome')">
+            Настройка Chrome Windows
+          </button>
+          <button class="guide-button" onclick="showInstructions('ubuntu-firefox')">
+            Настройка Firefox Ubuntu/Alt Linux
+          </button>
+          <button class="guide-button" onclick="showInstructions('ubuntu-chrome')">
+            Настройка Chrome Ubuntu/Alt Linux
+          </button>
+        </div>
+        <div id="instructions" class="instructions"></div>
+      </div>
+    </div>
+    <script src="script.js"></script>
+  </body>
+</html>

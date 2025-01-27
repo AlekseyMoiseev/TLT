@@ -1,0 +1,20 @@
+services:
+  montecarloworker:
+    image: nexus.sibedge.com/spl-ci-docker/tps_montecarlo_worker:53280c
+    container_name: montecarloworker
+    restart: unless-stopped
+    environment:
+      - CommonSettings__MessageBrokerSettings__Host=mq
+      - CommonSettings__MessageBrokerSettings__Port=5672
+      - CommonSettings__MessageBrokerSettings__UserName=admin
+      - CommonSettings__MessageBrokerSettings__Password=byJKQ7%OG3l3
+    env_file: ./backend/.env
+    volumes:
+      - ./tps_data/storage:/data/storage
+    depends_on:
+      mq:
+        condition: service_healthy
+    deploy:
+      resources:
+        limits:
+          cpus: '6'
